@@ -38,6 +38,8 @@ def main():
     state = "CASTING"
     is_mouse_held_down = False
     last_release_time = 0
+    last_cast_time = 0.0
+    bite_timeout_seconds = 12.0
 
     try:
         while True:
@@ -68,13 +70,8 @@ def main():
                 hold_left_click()
                 time.sleep(0.1)
                 release_left_click()
-                SetCursorPos(CAST_POINT)
-                time.sleep(0.1)
-                hold_left_click()
-                time.sleep(0.1)
-                release_left_click()
-
                 print("Line cast. Waiting for a bite...")
+                last_cast_time = time.time()
                 state = "WAITING_FOR_BITE"
                 time.sleep(1)
 
@@ -101,6 +98,9 @@ def main():
                 else:
                     # We print something here to know it's still looking
                     print("... a fish has yet to bite ...")
+                    if time.time() - last_cast_time >= bite_timeout_seconds:
+                        print("No bite detected. Recasting.")
+                        state = "CASTING"
                     time.sleep(0.1)
 
             # === STATE: FIGHTING THE FISH ===

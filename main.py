@@ -26,18 +26,6 @@ counter = 0
 COOLDOWN_SECONDS = 1.5 # cooldown duration (1.5 seconds)
 last_action_time = 0   # variable to track time
 
-def cast_line():
-    print("State: CASTING")
-    release_left_click()
-    release_key('a')
-    release_key('d')
-
-    SetCursorPos(CAST_POINT)
-    time.sleep(0.1)
-    click(CAST_POINT[0], CAST_POINT[1])
-    print("Line cast. Waiting for a bite...")
-    return time.time()
-
 def main():
     global last_arrow
     global counter
@@ -71,7 +59,25 @@ def main():
                 print("Waiting for game to return to idle state...")
                 time.sleep(1.0)
 
-                last_cast_time = cast_line()
+
+                print("State: CASTING")
+                release_left_click()
+                release_key('a')
+                release_key('d')
+
+                SetCursorPos(CAST_POINT)
+                time.sleep(0.1)
+                hold_left_click()
+                time.sleep(0.1)
+                release_left_click()
+                SetCursorPos(CAST_POINT)
+                time.sleep(0.1)
+                hold_left_click()
+                time.sleep(0.1)
+                release_left_click()
+
+                print("Line cast. Waiting for a bite...")
+                last_cast_time = time.time()
                 state = "WAITING_FOR_BITE"
                 time.sleep(1)
 
@@ -100,7 +106,7 @@ def main():
                     print("... a fish has yet to bite ...")
                     if time.time() - last_cast_time >= bite_timeout_seconds:
                         print("No bite detected. Recasting.")
-                        last_cast_time = cast_line()
+                        state = "CASTING"
                     time.sleep(0.1)
 
             # === STATE: FIGHTING THE FISH ===

@@ -1,7 +1,4 @@
 # main.py
-import logging
-import os
-import sys
 import time
 from vision import capture_screen, find_template, check_color_in_region
 from controls import hold_left_click, release_left_click, hold_key, release_key, click
@@ -23,43 +20,19 @@ FISHING_ROD_REGION = (1000, 800, 1040, 1100-762)
 FISHING_ROD_ICON_POS = (1674, 1016)
 FISHING_ROD_BUY = (1711, 598)
 
-def resource_path(relative_path):
-    base_path = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
-    return os.path.join(base_path, relative_path)
-
-ASSETS_DIR = resource_path("assets")
-EXCLAMATION_MARK_PATH = os.path.join(ASSETS_DIR, "exclamation_mark.png")
-ARROW_LEFT_PATH = os.path.join(ASSETS_DIR, "arrow_left.png")
-ARROW_RIGHT_PATH = os.path.join(ASSETS_DIR, "arrow_right.png")
-FISHING_ROD_EMPTY_PATH = os.path.join(ASSETS_DIR, "fishing_rod_empty.png")
-END_SCREEN_PATH = os.path.join(ASSETS_DIR, "end.png")
-
 # Tracks the last arrow showed (none=0, left=1, right=2)
 last_arrow = 0
 counter = 0
 COOLDOWN_SECONDS = 1.5 # cooldown duration (1.5 seconds)
 last_action_time = 0   # variable to track time
 
-def sleep_with_stop(delay_seconds, stop_event):
-    if stop_event is None:
-        time.sleep(delay_seconds)
-        return False
-
-    end_time = time.time() + delay_seconds
-    while time.time() < end_time:
-        if stop_event.is_set():
-            return True
-        time.sleep(0.05)
-    return False
-
-def run_auto_fish(stop_event=None):
+def main():
     global last_arrow
     global counter
     global last_action_time
     global COOLDOWN_SECONDS
     print("Starting fishing bot in 3 seconds... Switch to the game window!")
-    if sleep_with_stop(3, stop_event):
-        return
+    time.sleep(3)
     print("Bot started. Press Ctrl+C to stop.")
 
     state = "CASTING"
@@ -70,28 +43,21 @@ def run_auto_fish(stop_event=None):
 
     try:
         while True:
-            if stop_event is not None and stop_event.is_set():
-                break
             # === STATE: CASTING ===
             if state == "CASTING":
 
                 print("Changing fishing rod")
-                if sleep_with_stop(1.0, stop_event):
-                    break
+                time.sleep(1.0)
                 hold_key('m')
-                if sleep_with_stop(0.1, stop_event):
-                    break
+                time.sleep(0.1)
                 release_key('m')
-                if sleep_with_stop(0.5, stop_event):
-                    break
+                time.sleep(0.5)
                 click(FISHING_ROD_BUY[0], FISHING_ROD_BUY[1])
                 click(FISHING_ROD_BUY[0], FISHING_ROD_BUY[1])
-                if sleep_with_stop(0.5, stop_event):
-                    break
+                time.sleep(0.5)
                 # Wait for the game to return to the fishing state before casting again.
                 print("Waiting for game to return to idle state...")
-                if sleep_with_stop(1.0, stop_event):
-                    break
+                time.sleep(1.0)
 
 
                 print("State: CASTING")
@@ -100,25 +66,20 @@ def run_auto_fish(stop_event=None):
                 release_key('d')
 
                 SetCursorPos(CAST_POINT)
-                if sleep_with_stop(0.1, stop_event):
-                    break
+                time.sleep(0.1)
                 hold_left_click()
-                if sleep_with_stop(0.1, stop_event):
-                    break
+                time.sleep(0.1)
                 release_left_click()
                 SetCursorPos(CAST_POINT)
-                if sleep_with_stop(0.1, stop_event):
-                    break
+                time.sleep(0.1)
                 hold_left_click()
-                if sleep_with_stop(0.1, stop_event):
-                    break
+                time.sleep(0.1)
                 release_left_click()
 
                 print("Line cast. Waiting for a bite...")
                 last_cast_time = time.time()
                 state = "WAITING_FOR_BITE"
-                if sleep_with_stop(1, stop_event):
-                    break
+                time.sleep(1)
 
             # === STATE: WAITING FOR BITE ===
             elif state == "WAITING_FOR_BITE":
@@ -131,7 +92,7 @@ def run_auto_fish(stop_event=None):
 
                 # --- END OF DEBUG CODE ---
 
-                if find_template(screen, EXCLAMATION_MARK_PATH, threshold=0.5):
+                if find_template(screen, 'assets/exclamation_mark.png', threshold=0.5):
                     print("Bite detected! Hooking the fish.")
                     hold_left_click()
                     time.sleep(0.1)
@@ -146,8 +107,7 @@ def run_auto_fish(stop_event=None):
                     if time.time() - last_cast_time >= bite_timeout_seconds:
                         print("No bite detected. Recasting.")
                         state = "CASTING"
-                    if sleep_with_stop(0.1, stop_event):
-                        break
+                    time.sleep(0.1)
 
             # === STATE: FIGHTING THE FISH ===
             elif state == "FIGHTING_FISH":
@@ -178,8 +138,8 @@ def run_auto_fish(stop_event=None):
 
                 arrow_screen_roi = screen[
                     ARROW_REGION[1]:ARROW_REGION[1] + ARROW_REGION[3], ARROW_REGION[0]:ARROW_REGION[0] + ARROW_REGION[2]]
-                found_left = find_template(arrow_screen_roi, ARROW_LEFT_PATH, threshold=0.4)
-                found_right = find_template(arrow_screen_roi, ARROW_RIGHT_PATH, threshold=0.4)
+                found_left = find_template(arrow_screen_roi, 'assets/arrow_left.png', threshold=0.4)
+                found_right = find_template(arrow_screen_roi, 'assets/arrow_right.png', threshold=0.4)
 
                 # --- ADD THIS DEBUG WINDOW ---
 
@@ -221,14 +181,13 @@ def run_auto_fish(stop_event=None):
                         last_action_time = time.time()
                     else:
                         pass
-                if find_template(screen1, FISHING_ROD_EMPTY_PATH, threshold=0.7):
+                if find_template(screen1, 'assets/fishing_rod_empty.png', threshold=0.7):
                     state = "CASTING"
                     #cv2.destroyAllWindows()
-                if find_template(screen, END_SCREEN_PATH, threshold=0.4):
+                if find_template(screen, 'assets/end.png', threshold=0.4):
                     print("Minigame seems to be over. Fish caught!")
                     # CRITICAL: Wait for the UI to become interactive.
-                    if sleep_with_stop(1.0, stop_event):
-                        break
+                    time.sleep(1.0)
 
                     # Use our new, more reliable click function.
                     click(EXIT_POINT[0], EXIT_POINT[1])
@@ -238,8 +197,7 @@ def run_auto_fish(stop_event=None):
 
                     # Wait for the game to return to the fishing state before casting again.
                     print("Waiting for game to return to idle state...")
-                    if sleep_with_stop(3.0, stop_event):
-                        break
+                    time.sleep(3.0)
 
                     # Reset the state for the next cast.
                     state = "CASTING"
@@ -247,17 +205,13 @@ def run_auto_fish(stop_event=None):
                     cv2.destroyAllWindows()
 
 
-                if sleep_with_stop(0.1, stop_event):
-                    break
+                time.sleep(0.1)
 
     except KeyboardInterrupt:
         print("\nBot stopped by user. Releasing all controls.")
-    except Exception:
-        logging.exception("Unhandled error in auto-fishing loop")
-    finally:
         release_left_click()
         release_key('a')
         release_key('d')
 
 if __name__ == "__main__":
-    run_auto_fish()
+    main()

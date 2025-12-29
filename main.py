@@ -1,4 +1,5 @@
 # main.py
+import threading
 import time
 import tkinter as tk
 from vision import capture_screen, find_template, check_color_in_region
@@ -33,47 +34,35 @@ pyautogui.FAILSAFE = True
 MODE_FISHING = "FISHING"
 MODE_MINING = "MINING"
 
-def select_mode_ui():
-    selected = {"mode": None}
+def _sleep_with_stop(seconds, stop_event):
+    end_time = time.time() + seconds
+    while time.time() < end_time:
+        if stop_event.is_set():
+            return False
+        time.sleep(min(0.1, end_time - time.time()))
+    return True
 
-    def choose(mode):
-        selected["mode"] = mode
-        root.destroy()
-
-    root = tk.Tk()
-    root.title("Select Mode")
-    root.geometry("260x140")
-    root.resizable(False, False)
-
-    label = tk.Label(root, text="Choose a mode to run", pady=10)
-    label.pack()
-
-    btn_fish = tk.Button(root, text="Fishing", width=20, command=lambda: choose(MODE_FISHING))
-    btn_fish.pack(pady=4)
-
-    btn_mine = tk.Button(root, text="Mining", width=20, command=lambda: choose(MODE_MINING))
-    btn_mine.pack(pady=4)
-
-    root.mainloop()
-    return selected["mode"]
-
-def run_mining():
+def run_mining(stop_event):
     print("Starting automine in 3 seconds... Switch to the game window!")
-    time.sleep(3)
+    if not _sleep_with_stop(3, stop_event):
+        return
     print("Automine started. Press Ctrl+C to stop.")
-    while True:
+    while not stop_event.is_set():
         pyautogui.press('f')
-        time.sleep(0.2)
+        if not _sleep_with_stop(0.2, stop_event):
+            break
         pyautogui.scroll(-300)
-        time.sleep(0.5)
+        if not _sleep_with_stop(0.5, stop_event):
+            break
 
-def run_fishing():
+def run_fishing(stop_event):
     global last_arrow
     global counter
     global last_action_time
     global COOLDOWN_SECONDS
     print("Starting fishing bot in 3 seconds... Switch to the game window!")
-    time.sleep(3)
+    if not _sleep_with_stop(3, stop_event):
+        return
     print("Bot started. Press Ctrl+C to stop.")
 
     state = "CASTING"
@@ -83,22 +72,27 @@ def run_fishing():
     bite_timeout_seconds = 30.0
 
     try:
-        while True:
+        while not stop_event.is_set():
             # === STATE: CASTING ===
             if state == "CASTING":
 
                 print("Changing fishing rod")
-                time.sleep(1.0)
+                if not _sleep_with_stop(1.0, stop_event):
+                    break
                 hold_key('m')
-                time.sleep(0.1)
+                if not _sleep_with_stop(0.1, stop_event):
+                    break
                 release_key('m')
-                time.sleep(0.5)
+                if not _sleep_with_stop(0.5, stop_event):
+                    break
                 click(FISHING_ROD_BUY[0], FISHING_ROD_BUY[1])
                 click(FISHING_ROD_BUY[0], FISHING_ROD_BUY[1])
-                time.sleep(0.5)
+                if not _sleep_with_stop(0.5, stop_event):
+                    break
                 # Wait for the game to return to the fishing state before casting again.
                 print("Waiting for game to return to idle state...")
-                time.sleep(1.0)
+                if not _sleep_with_stop(1.0, stop_event):
+                    break
 
 
                 print("State: CASTING")
@@ -107,20 +101,25 @@ def run_fishing():
                 release_key('d')
 
                 move_cursor(CAST_POINT[0], CAST_POINT[1])
-                time.sleep(0.1)
+                if not _sleep_with_stop(0.1, stop_event):
+                    break
                 hold_left_click()
-                time.sleep(0.1)
+                if not _sleep_with_stop(0.1, stop_event):
+                    break
                 release_left_click()
                 move_cursor(CAST_POINT[0], CAST_POINT[1])
-                time.sleep(0.1)
+                if not _sleep_with_stop(0.1, stop_event):
+                    break
                 hold_left_click()
-                time.sleep(0.1)
+                if not _sleep_with_stop(0.1, stop_event):
+                    break
                 release_left_click()
 
                 print("Line cast. Waiting for a bite...")
                 last_cast_time = time.time()
                 state = "WAITING_FOR_BITE"
-                time.sleep(1)
+                if not _sleep_with_stop(1, stop_event):
+                    break
 
             # === STATE: WAITING FOR BITE ===
             elif state == "WAITING_FOR_BITE":
@@ -136,19 +135,22 @@ def run_fishing():
                 if find_template(screen, 'assets/exclamation_mark.png', threshold=0.5):
                     print("Bite detected! Hooking the fish.")
                     hold_left_click()
-                    time.sleep(0.1)
+                    if not _sleep_with_stop(0.1, stop_event):
+                        break
                     release_left_click()
                     state = "FIGHTING_FISH"
                     is_mouse_held_down = False
                     last_release_time = 0
-                    time.sleep(1)
+                    if not _sleep_with_stop(1, stop_event):
+                        break
                 else:
                     # We print something here to know it's still looking
                     print("... a fish has yet to bite ...")
                     if time.time() - last_cast_time >= bite_timeout_seconds:
                         print("No bite detected. Recasting.")
                         state = "CASTING"
-                    time.sleep(0.1)
+                    if not _sleep_with_stop(0.1, stop_event):
+                        break
 
             # === STATE: FIGHTING THE FISH ===
             elif state == "FIGHTING_FISH":
@@ -228,7 +230,8 @@ def run_fishing():
                 if find_template(screen, 'assets/end.png', threshold=0.4):
                     print("Minigame seems to be over. Fish caught!")
                     # CRITICAL: Wait for the UI to become interactive.
-                    time.sleep(1.0)
+                    if not _sleep_with_stop(1.0, stop_event):
+                        break
 
                     # Use our new, more reliable click function.
                     click(EXIT_POINT[0], EXIT_POINT[1])
@@ -238,7 +241,8 @@ def run_fishing():
 
                     # Wait for the game to return to the fishing state before casting again.
                     print("Waiting for game to return to idle state...")
-                    time.sleep(3.0)
+                    if not _sleep_with_stop(3.0, stop_event):
+                        break
 
                     # Reset the state for the next cast.
                     state = "CASTING"
@@ -246,20 +250,64 @@ def run_fishing():
                     cv2.destroyAllWindows()
 
 
-                time.sleep(0.1)
+                if not _sleep_with_stop(0.1, stop_event):
+                    break
 
     except KeyboardInterrupt:
         print("\nBot stopped by user. Releasing all controls.")
+    finally:
         release_left_click()
         release_key('a')
         release_key('d')
 
 def main():
-    mode = select_mode_ui()
-    if mode == MODE_MINING:
-        run_mining()
-    else:
-        run_fishing()
+    stop_event = threading.Event()
+    worker = {"thread": None}
+
+    def set_status(text):
+        status_label.config(text=text)
+
+    def start_mode(mode):
+        if worker["thread"] and worker["thread"].is_alive():
+            return
+        stop_event.clear()
+        if mode == MODE_MINING:
+            target = run_mining
+            set_status("Running: Mining")
+        else:
+            target = run_fishing
+            set_status("Running: Fishing")
+        thread = threading.Thread(target=target, args=(stop_event,), daemon=True)
+        worker["thread"] = thread
+        thread.start()
+
+    def stop_mode():
+        stop_event.set()
+        set_status("Stopped")
+
+    def on_close():
+        stop_event.set()
+        root.destroy()
+
+    root = tk.Tk()
+    root.title("Bot Control")
+    root.geometry("280x180")
+    root.resizable(False, False)
+
+    status_label = tk.Label(root, text="Idle", pady=10)
+    status_label.pack()
+
+    btn_fish = tk.Button(root, text="Start Fishing", width=22, command=lambda: start_mode(MODE_FISHING))
+    btn_fish.pack(pady=4)
+
+    btn_mine = tk.Button(root, text="Start Mining", width=22, command=lambda: start_mode(MODE_MINING))
+    btn_mine.pack(pady=4)
+
+    btn_stop = tk.Button(root, text="Stop", width=22, command=stop_mode)
+    btn_stop.pack(pady=6)
+
+    root.protocol("WM_DELETE_WINDOW", on_close)
+    root.mainloop()
 
 if __name__ == "__main__":
     main()

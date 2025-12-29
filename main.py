@@ -26,13 +26,26 @@ counter = 0
 COOLDOWN_SECONDS = 1.5 # cooldown duration (1.5 seconds)
 last_action_time = 0   # variable to track time
 
-def main():
+def sleep_with_stop(delay_seconds, stop_event):
+    if stop_event is None:
+        time.sleep(delay_seconds)
+        return False
+
+    end_time = time.time() + delay_seconds
+    while time.time() < end_time:
+        if stop_event.is_set():
+            return True
+        time.sleep(0.05)
+    return False
+
+def run_auto_fish(stop_event=None):
     global last_arrow
     global counter
     global last_action_time
     global COOLDOWN_SECONDS
     print("Starting fishing bot in 3 seconds... Switch to the game window!")
-    time.sleep(3)
+    if sleep_with_stop(3, stop_event):
+        return
     print("Bot started. Press Ctrl+C to stop.")
 
     state = "CASTING"
@@ -43,21 +56,28 @@ def main():
 
     try:
         while True:
+            if stop_event is not None and stop_event.is_set():
+                break
             # === STATE: CASTING ===
             if state == "CASTING":
 
                 print("Changing fishing rod")
-                time.sleep(1.0)
+                if sleep_with_stop(1.0, stop_event):
+                    break
                 hold_key('m')
-                time.sleep(0.1)
+                if sleep_with_stop(0.1, stop_event):
+                    break
                 release_key('m')
-                time.sleep(0.5)
+                if sleep_with_stop(0.5, stop_event):
+                    break
                 click(FISHING_ROD_BUY[0], FISHING_ROD_BUY[1])
                 click(FISHING_ROD_BUY[0], FISHING_ROD_BUY[1])
-                time.sleep(0.5)
+                if sleep_with_stop(0.5, stop_event):
+                    break
                 # Wait for the game to return to the fishing state before casting again.
                 print("Waiting for game to return to idle state...")
-                time.sleep(1.0)
+                if sleep_with_stop(1.0, stop_event):
+                    break
 
 
                 print("State: CASTING")
@@ -66,20 +86,25 @@ def main():
                 release_key('d')
 
                 SetCursorPos(CAST_POINT)
-                time.sleep(0.1)
+                if sleep_with_stop(0.1, stop_event):
+                    break
                 hold_left_click()
-                time.sleep(0.1)
+                if sleep_with_stop(0.1, stop_event):
+                    break
                 release_left_click()
                 SetCursorPos(CAST_POINT)
-                time.sleep(0.1)
+                if sleep_with_stop(0.1, stop_event):
+                    break
                 hold_left_click()
-                time.sleep(0.1)
+                if sleep_with_stop(0.1, stop_event):
+                    break
                 release_left_click()
 
                 print("Line cast. Waiting for a bite...")
                 last_cast_time = time.time()
                 state = "WAITING_FOR_BITE"
-                time.sleep(1)
+                if sleep_with_stop(1, stop_event):
+                    break
 
             # === STATE: WAITING FOR BITE ===
             elif state == "WAITING_FOR_BITE":
@@ -107,7 +132,8 @@ def main():
                     if time.time() - last_cast_time >= bite_timeout_seconds:
                         print("No bite detected. Recasting.")
                         state = "CASTING"
-                    time.sleep(0.1)
+                    if sleep_with_stop(0.1, stop_event):
+                        break
 
             # === STATE: FIGHTING THE FISH ===
             elif state == "FIGHTING_FISH":
@@ -187,7 +213,8 @@ def main():
                 if find_template(screen, 'assets/end.png', threshold=0.4):
                     print("Minigame seems to be over. Fish caught!")
                     # CRITICAL: Wait for the UI to become interactive.
-                    time.sleep(1.0)
+                    if sleep_with_stop(1.0, stop_event):
+                        break
 
                     # Use our new, more reliable click function.
                     click(EXIT_POINT[0], EXIT_POINT[1])
@@ -197,7 +224,8 @@ def main():
 
                     # Wait for the game to return to the fishing state before casting again.
                     print("Waiting for game to return to idle state...")
-                    time.sleep(3.0)
+                    if sleep_with_stop(3.0, stop_event):
+                        break
 
                     # Reset the state for the next cast.
                     state = "CASTING"
@@ -205,13 +233,15 @@ def main():
                     cv2.destroyAllWindows()
 
 
-                time.sleep(0.1)
+                if sleep_with_stop(0.1, stop_event):
+                    break
 
     except KeyboardInterrupt:
         print("\nBot stopped by user. Releasing all controls.")
+    finally:
         release_left_click()
         release_key('a')
         release_key('d')
 
 if __name__ == "__main__":
-    main()
+    run_auto_fish()

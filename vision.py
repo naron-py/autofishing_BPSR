@@ -1,4 +1,5 @@
 # vision.py
+import os
 import numpy as np
 import cv2
 import win32gui
@@ -34,7 +35,13 @@ def capture_screen(region=None):
 
 def find_template(screen, template_path, threshold=0.8):
     # This function also remains the same.
+    if not os.path.exists(template_path):
+        print(f"[WARN] Template not found: {template_path}")
+        return None
     template = cv2.imread(template_path, cv2.IMREAD_UNCHANGED)
+    if template is None:
+        print(f"[WARN] Failed to load template: {template_path}")
+        return None
     if template.shape[2] == 4:
         template = template[:,:,:3]
     result = cv2.matchTemplate(screen, template, cv2.TM_CCOEFF_NORMED)

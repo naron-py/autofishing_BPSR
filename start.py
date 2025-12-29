@@ -1,9 +1,17 @@
 # start.py
+import logging
 import threading
 import tkinter as tk
 
 from auto_mine import run_auto_mine
 from main import run_auto_fish
+
+LOG_FILE = "autofish.log"
+logging.basicConfig(
+    filename=LOG_FILE,
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(message)s",
+)
 
 class BotUI:
     def __init__(self, root):
@@ -67,6 +75,9 @@ class BotUI:
         def runner():
             try:
                 target(self.stop_event)
+            except Exception:
+                logging.exception("Unhandled error while running %s task", task_name)
+                self.set_status(f"Status: {task_name} error (see {LOG_FILE})")
             finally:
                 self.set_status("Status: Idle")
 

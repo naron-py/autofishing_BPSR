@@ -1,4 +1,5 @@
 # main.py
+import logging
 import os
 import sys
 import time
@@ -251,6 +252,8 @@ def run_auto_fish(stop_event=None):
 
     except KeyboardInterrupt:
         print("\nBot stopped by user. Releasing all controls.")
+    except Exception:
+        logging.exception("Unhandled error in auto-fishing loop")
     finally:
         release_left_click()
         release_key('a')

@@ -1,4 +1,6 @@
 # main.py
+import os
+import sys
 import time
 from vision import capture_screen, find_template, check_color_in_region
 from controls import hold_left_click, release_left_click, hold_key, release_key, click
@@ -19,6 +21,17 @@ EXIT_POINT = (1595, 982)
 FISHING_ROD_REGION = (1000, 800, 1040, 1100-762)
 FISHING_ROD_ICON_POS = (1674, 1016)
 FISHING_ROD_BUY = (1711, 598)
+
+def resource_path(relative_path):
+    base_path = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base_path, relative_path)
+
+ASSETS_DIR = resource_path("assets")
+EXCLAMATION_MARK_PATH = os.path.join(ASSETS_DIR, "exclamation_mark.png")
+ARROW_LEFT_PATH = os.path.join(ASSETS_DIR, "arrow_left.png")
+ARROW_RIGHT_PATH = os.path.join(ASSETS_DIR, "arrow_right.png")
+FISHING_ROD_EMPTY_PATH = os.path.join(ASSETS_DIR, "fishing_rod_empty.png")
+END_SCREEN_PATH = os.path.join(ASSETS_DIR, "end.png")
 
 # Tracks the last arrow showed (none=0, left=1, right=2)
 last_arrow = 0
@@ -117,7 +130,7 @@ def run_auto_fish(stop_event=None):
 
                 # --- END OF DEBUG CODE ---
 
-                if find_template(screen, 'assets/exclamation_mark.png', threshold=0.5):
+                if find_template(screen, EXCLAMATION_MARK_PATH, threshold=0.5):
                     print("Bite detected! Hooking the fish.")
                     hold_left_click()
                     time.sleep(0.1)
@@ -164,8 +177,8 @@ def run_auto_fish(stop_event=None):
 
                 arrow_screen_roi = screen[
                     ARROW_REGION[1]:ARROW_REGION[1] + ARROW_REGION[3], ARROW_REGION[0]:ARROW_REGION[0] + ARROW_REGION[2]]
-                found_left = find_template(arrow_screen_roi, 'assets/arrow_left.png', threshold=0.4)
-                found_right = find_template(arrow_screen_roi, 'assets/arrow_right.png', threshold=0.4)
+                found_left = find_template(arrow_screen_roi, ARROW_LEFT_PATH, threshold=0.4)
+                found_right = find_template(arrow_screen_roi, ARROW_RIGHT_PATH, threshold=0.4)
 
                 # --- ADD THIS DEBUG WINDOW ---
 
@@ -207,10 +220,10 @@ def run_auto_fish(stop_event=None):
                         last_action_time = time.time()
                     else:
                         pass
-                if find_template(screen1, 'assets/fishing_rod_empty.png', threshold=0.7):
+                if find_template(screen1, FISHING_ROD_EMPTY_PATH, threshold=0.7):
                     state = "CASTING"
                     #cv2.destroyAllWindows()
-                if find_template(screen, 'assets/end.png', threshold=0.4):
+                if find_template(screen, END_SCREEN_PATH, threshold=0.4):
                     print("Minigame seems to be over. Fish caught!")
                     # CRITICAL: Wait for the UI to become interactive.
                     if sleep_with_stop(1.0, stop_event):

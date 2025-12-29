@@ -1,7 +1,8 @@
 # controls.py
+import time
 import win32api
 import win32con
-import time
+import pyautogui
 from win32api import SetCursorPos
 
 # --- Key Code Dictionary ---
@@ -18,12 +19,30 @@ def hold_left_click():
 def release_left_click():
     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
 
+def _clamp_to_virtual_screen(x, y):
+    left = win32api.GetSystemMetrics(win32con.SM_XVIRTUALSCREEN)
+    top = win32api.GetSystemMetrics(win32con.SM_YVIRTUALSCREEN)
+    width = win32api.GetSystemMetrics(win32con.SM_CXVIRTUALSCREEN)
+    height = win32api.GetSystemMetrics(win32con.SM_CYVIRTUALSCREEN)
+    right = left + width - 1
+    bottom = top + height - 1
+    return (max(left, min(right, x)), max(top, min(bottom, y)))
+
+def move_cursor(x, y):
+    x, y = _clamp_to_virtual_screen(int(x), int(y))
+    try:
+        SetCursorPos((x, y))
+    except win32api.error:
+        # Fallback to PyAutoGUI if SetCursorPos fails.
+        pyautogui.moveTo(x, y)
+    return x, y
+
 def click(x, y):
     """
     Moves the mouse to a coordinate and performs a realistic left click.
     """
+    x, y = move_cursor(x, y)
     print(f"Moving to ({x}, {y}) and clicking.")
-    SetCursorPos((x, y))
     # A short pause after moving the mouse can be crucial
     time.sleep(0.05)
     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)

@@ -1,8 +1,10 @@
 # main.py
 import time
+import tkinter as tk
 from vision import capture_screen, find_template, check_color_in_region
-from controls import hold_left_click, release_left_click, hold_key, release_key, click
+from controls import hold_left_click, release_left_click, hold_key, release_key, click, move_cursor
 import cv2
+import pyautogui
 from win32api import SetCursorPos
 
 # --- IMPORTANT: THESE VALUES ONLY WORK FOR 1920x1080 SCREEN ---
@@ -26,7 +28,46 @@ counter = 0
 COOLDOWN_SECONDS = 1.5 # cooldown duration (1.5 seconds)
 last_action_time = 0   # variable to track time
 
-def main():
+pyautogui.FAILSAFE = True
+
+MODE_FISHING = "FISHING"
+MODE_MINING = "MINING"
+
+def select_mode_ui():
+    selected = {"mode": None}
+
+    def choose(mode):
+        selected["mode"] = mode
+        root.destroy()
+
+    root = tk.Tk()
+    root.title("Select Mode")
+    root.geometry("260x140")
+    root.resizable(False, False)
+
+    label = tk.Label(root, text="Choose a mode to run", pady=10)
+    label.pack()
+
+    btn_fish = tk.Button(root, text="Fishing", width=20, command=lambda: choose(MODE_FISHING))
+    btn_fish.pack(pady=4)
+
+    btn_mine = tk.Button(root, text="Mining", width=20, command=lambda: choose(MODE_MINING))
+    btn_mine.pack(pady=4)
+
+    root.mainloop()
+    return selected["mode"]
+
+def run_mining():
+    print("Starting automine in 3 seconds... Switch to the game window!")
+    time.sleep(3)
+    print("Automine started. Press Ctrl+C to stop.")
+    while True:
+        pyautogui.press('f')
+        time.sleep(0.2)
+        pyautogui.scroll(-300)
+        time.sleep(0.5)
+
+def run_fishing():
     global last_arrow
     global counter
     global last_action_time
@@ -39,7 +80,7 @@ def main():
     is_mouse_held_down = False
     last_release_time = 0
     last_cast_time = 0.0
-    bite_timeout_seconds = 12.0
+    bite_timeout_seconds = 30.0
 
     try:
         while True:
@@ -65,12 +106,12 @@ def main():
                 release_key('a')
                 release_key('d')
 
-                SetCursorPos(CAST_POINT)
+                move_cursor(CAST_POINT[0], CAST_POINT[1])
                 time.sleep(0.1)
                 hold_left_click()
                 time.sleep(0.1)
                 release_left_click()
-                SetCursorPos(CAST_POINT)
+                move_cursor(CAST_POINT[0], CAST_POINT[1])
                 time.sleep(0.1)
                 hold_left_click()
                 time.sleep(0.1)
@@ -212,6 +253,13 @@ def main():
         release_left_click()
         release_key('a')
         release_key('d')
+
+def main():
+    mode = select_mode_ui()
+    if mode == MODE_MINING:
+        run_mining()
+    else:
+        run_fishing()
 
 if __name__ == "__main__":
     main()
